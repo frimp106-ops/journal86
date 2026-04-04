@@ -8,7 +8,7 @@ This folder contains your complete JOURNAL.86 app ready to deploy to Vercel for 
 
 ## 📦 WHAT'S IN THIS FOLDER:
 
-```
+``` 
 journal86-deploy/
 ├── src/
 │   ├── App.jsx          (Your complete app - 1100+ lines)
