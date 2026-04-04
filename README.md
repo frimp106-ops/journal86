@@ -4,7 +4,7 @@
 
 This folder contains your complete JOURNAL.86 app ready to deploy to Vercel for **$0**.
 
----
+--- 
 
 ## 📦 WHAT'S IN THIS FOLDER:
 
