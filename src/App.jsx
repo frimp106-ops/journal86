@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Heart, Moon, Sun, Zap, Brain, Coffee, Calendar, Download, Settings, User, LogOut, TrendingUp } from 'lucide-react';
+import { Camera, Heart, Moon, Sun, Zap, Brain, Coffee, Calendar, Download, Settings, User, LogOut, TrendingUp, Activity, Wind, CloudRain, Cloud, Minus, Sparkles, Flame, BedDouble, Theater, Battery, CloudFog, AlertCircle, FileText, Smile, Thermometer, Target } from 'lucide-react';
 
 // Main App Component
 export default function Journal86App() {
@@ -47,9 +47,9 @@ export default function Journal86App() {
   
   // Goals State
   const [goals, setGoals] = useState([
-    { id: 1, name: 'Sleep 7+ hours', completed: false, icon: '😴' },
-    { id: 2, name: 'Movement/Exercise', completed: false, icon: '🚶' },
-    { id: 3, name: 'Calm Practice', completed: false, icon: '🧘' },
+    { id: 1, name: 'Sleep 7+ hours', completed: false, icon: 'Moon' },
+    { id: 2, name: 'Movement/Exercise', completed: false, icon: 'Activity' },
+    { id: 3, name: 'Calm Practice', completed: false, icon: 'Wind' },
   ]);
   
   // Visualization State
@@ -381,16 +381,9 @@ This document contains self-tracked information only.
             {audioLevels.map((level, i) => {
               const row = Math.floor(i / 12);
               const col = i % 12;
-              const centerRow = 5;
-              const centerCol = 6;
-              const distanceFromCenter = Math.sqrt(
-                Math.pow(col - centerCol, 2) + Math.pow(row - centerRow, 2)
-              );
               
-              if (distanceFromCenter > 5.5) return null;
-              
-              const x = (col - centerCol) * 8.33;
-              const y = (row - centerRow) * 10;
+              const x = (col - 5.5) * 8.33;
+              const y = (row - 5) * 10;
               
               let dotColor = 'bg-stone-800';
               
@@ -467,28 +460,28 @@ This document contains self-tracked information only.
                   onClick={() => setCurrentView('journal')}
                   className="p-4 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors"
                 >
-                  <div className="text-2xl mb-2">📝</div>
+                  <FileText className="w-6 h-6 text-orange-500 mb-2" />
                   <div className="text-sm font-medium text-stone-700">New Entry</div>
                 </button>
                 <button
                   onClick={() => setCurrentView('mood')}
                   className="p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-colors"
                 >
-                  <div className="text-2xl mb-2">💗</div>
+                  <Smile className="w-6 h-6 text-green-500 mb-2" />
                   <div className="text-sm font-medium text-stone-700">Track Mood</div>
                 </button>
                 <button
                   onClick={() => setCurrentView('symptoms')}
                   className="p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"
                 >
-                  <div className="text-2xl mb-2">🌡️</div>
+                  <Thermometer className="w-6 h-6 text-blue-500 mb-2" />
                   <div className="text-sm font-medium text-stone-700">Symptoms</div>
                 </button>
                 <button
                   onClick={() => setCurrentView('goals')}
                   className="p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-colors"
                 >
-                  <div className="text-2xl mb-2">🎯</div>
+                  <Target className="w-6 h-6 text-purple-500 mb-2" />
                   <div className="text-sm font-medium text-stone-700">Goals</div>
                 </button>
               </div>
@@ -594,12 +587,20 @@ This document contains self-tracked information only.
             {/* Mood Selector */}
             <div className="space-y-4 mb-8">
               {[
-                { level: 1, label: 'Low', color: 'blue', emoji: '😔' },
-                { level: 2, label: 'Fair', color: 'teal', emoji: '😐' },
-                { level: 3, label: 'Neutral', color: 'green', emoji: '🙂' },
-                { level: 4, label: 'Good', color: 'orange', emoji: '😊' },
-                { level: 5, label: 'Great', color: 'pink', emoji: '😄' },
-              ].map(({ level, label, color, emoji }) => (
+                { level: 1, label: 'Low', color: 'blue', icon: 'CloudRain' },
+                { level: 2, label: 'Fair', color: 'teal', icon: 'Cloud' },
+                { level: 3, label: 'Neutral', color: 'green', icon: 'Minus' },
+                { level: 4, label: 'Good', color: 'orange', icon: 'Sun' },
+                { level: 5, label: 'Great', color: 'pink', icon: 'Sparkles' },
+              ].map(({ level, label, color, icon }) => {
+                const IconComponent = {
+                  CloudRain,
+                  Cloud,
+                  Minus,
+                  Sun,
+                  Sparkles
+                }[icon];
+                return (
                 <button
                   key={level}
                   onClick={() => saveMood(level)}
@@ -611,7 +612,7 @@ This document contains self-tracked information only.
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{emoji}</span>
+                      <IconComponent className={`w-5 h-5 text-${color}-500`} />
                       <span className="font-medium text-stone-700">{label}</span>
                     </div>
                     {currentMood === level && (
@@ -619,21 +620,46 @@ This document contains self-tracked information only.
                     )}
                   </div>
                 </button>
-              ))}
+              );
+            })}
             </div>
             
-            {/* Mood History */}
+            {/* Mood History with Dates */}
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-stone-600 mb-3">Last 7 Days</h3>
-              <div className="flex gap-2">
-                {moodHistory.map((m, i) => (
-                  <div key={i} className="flex-1 text-center">
-                    <div className={`w-full h-16 bg-${m.color}-400 rounded-lg mb-2`} />
-                    <div className="text-xs text-stone-500">
-                      {new Date(m.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium text-stone-600">Your Week</h3>
+                <div className="flex gap-2">
+                  <button className="p-1 rounded hover:bg-stone-100">
+                    <span className="text-stone-400">◀</span>
+                  </button>
+                  <button className="p-1 rounded hover:bg-stone-100">
+                    <span className="text-stone-400">▶</span>
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="flex gap-3 min-w-max">
+                  {moodHistory.map((m, i) => {
+                    const date = new Date(m.date);
+                    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+                    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const moodColors = {
+                      'blue': 'bg-blue-400',
+                      'teal': 'bg-teal-400',
+                      'green': 'bg-green-400',
+                      'orange': 'bg-orange-400',
+                      'pink': 'bg-pink-400'
+                    };
+                    return (
+                      <div key={i} className="flex flex-col items-center min-w-[70px]">
+                        <div className="text-xs text-stone-500 mb-1">{monthDay}</div>
+                        <div className="text-xs text-stone-400 mb-2">{dayOfWeek}</div>
+                        <div className={`w-8 h-8 ${moodColors[m.color]} rounded-full mb-2`} />
+                        <div className="text-xs font-medium text-stone-600">{m.mood}/5</div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             
@@ -652,17 +678,17 @@ This document contains self-tracked information only.
             
             <div className="space-y-6">
               {[
-                { key: 'hotFlashes', label: 'Hot Flashes', icon: '🔥' },
-                { key: 'sleep', label: 'Sleep Issues', icon: '😴' },
-                { key: 'moodSwings', label: 'Mood Swings', icon: '🎭' },
-                { key: 'fatigue', label: 'Fatigue', icon: '😮‍💨' },
-                { key: 'brainFog', label: 'Brain Fog', icon: '🧠' },
-                { key: 'anxiety', label: 'Anxiety', icon: '😰' },
-              ].map(({ key, label, icon }) => (
+                { key: 'hotFlashes', label: 'Hot Flashes', icon: Flame },
+                { key: 'sleep', label: 'Sleep Issues', icon: BedDouble },
+                { key: 'moodSwings', label: 'Mood Swings', icon: Theater },
+                { key: 'fatigue', label: 'Fatigue', icon: Battery },
+                { key: 'brainFog', label: 'Brain Fog', icon: CloudFog },
+                { key: 'anxiety', label: 'Anxiety', icon: AlertCircle },
+              ].map(({ key, label, icon: Icon }) => (
                 <div key={key}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{icon}</span>
+                      <Icon className="w-5 h-5 text-orange-500" />
                       <span className="font-medium text-stone-700">{label}</span>
                     </div>
                     <span className="text-sm text-stone-500">
@@ -695,33 +721,40 @@ This document contains self-tracked information only.
             <h2 className="text-2xl font-light text-stone-800 mb-6">Today's Goals</h2>
             
             <div className="space-y-4">
-              {goals.map((goal) => (
-                <button
-                  key={goal.id}
-                  onClick={() => toggleGoal(goal.id)}
-                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                    goal.completed
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-stone-200 hover:border-stone-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{goal.icon}</span>
-                      <span className={`font-medium ${
-                        goal.completed ? 'text-green-700 line-through' : 'text-stone-700'
-                      }`}>
-                        {goal.name}
-                      </span>
-                    </div>
-                    {goal.completed && (
-                      <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-sm">
-                        ✓
+              {goals.map((goal) => {
+                const IconComponent = {
+                  Moon,
+                  Activity,
+                  Wind
+                }[goal.icon];
+                return (
+                  <button
+                    key={goal.id}
+                    onClick={() => toggleGoal(goal.id)}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      goal.completed
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-stone-200 hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <IconComponent className={`w-5 h-5 ${goal.completed ? 'text-green-600' : 'text-stone-500'}`} />
+                        <span className={`font-medium ${
+                          goal.completed ? 'text-green-700 line-through' : 'text-stone-700'
+                        }`}>
+                          {goal.name}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                </button>
-              ))}
+                      {goal.completed && (
+                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-sm">
+                          ✓
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
             
             <button
@@ -850,3 +883,4 @@ This document contains self-tracked information only.
     </div>
   );
 }
+
