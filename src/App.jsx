@@ -1,19 +1,57 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Home, Heart, FileText, Wind, Mic, Circle, Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Home, FileText, Mic, Circle, Play, Pause, SkipBack, SkipForward, Volume2, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 export default function Journal86() {
   const [activeTab, setActiveTab] = useState('home');
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [selectedCalm, setSelectedCalm] = useState('ocean');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [selectedCalm, setSelectedCalm] = useState(null);
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState('Calm Piano Mix');
   const [progress, setProgress] = useState(154);
   const [volume, setVolume] = useState(70);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [journalEntry, setJournalEntry] = useState('');
+  const [selectedMood, setSelectedMood] = useState('');
+  const [symptoms, setSymptoms] = useState({
+    hotFlash: false,
+    nightSweat: false,
+    poorSleep: false,
+    brainFog: false,
+    moodSwing: false,
+    period: false
+  });
+  
+  const [medications, setMedications] = useState({
+    hrt: false,
+    vitaminD: false,
+    calcium: false,
+    eveningPrimrose: false,
+    magnesium: false,
+    blackCohosh: false
+  });
+  
+  const [customMedication, setCustomMedication] = useState('');
   
   const recordingInterval = useRef(null);
   const audioContext = useRef(null);
+
+  // Mock entries data
+  const [entries, setEntries] = useState({
+    '2026-02-14': {
+      text: 'Feeling better today. Ocean sounds really helped with anxiety.',
+      mood: 'Good',
+      symptoms: ['hotFlash', 'poorSleep'],
+      voiceNote: null
+    },
+    '2026-02-13': {
+      text: 'Tough night. Had 5 hot flashes. Could not sleep at all.',
+      mood: 'Low',
+      symptoms: ['hotFlash', 'nightSweat', 'poorSleep'],
+      voiceNote: '2:34'
+    }
+  });
 
   // Cassette sounds
   const playInsertSound = () => {
@@ -58,7 +96,6 @@ export default function Journal86() {
     oscillator.stop(ctx.currentTime + 0.12);
   };
 
-  // Recording controls
   const startRecording = () => {
     playInsertSound();
     setIsRecording(true);
@@ -82,72 +119,78 @@ export default function Journal86() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Dot grid data
   const dotColors = [
     '#D1D5DB', '#D1D5DB', '#FDE047', '#FB923C', 
     '#FDA4AF', '#FDE68A', '#FEF3C7', '#D1D5DB', 
     '#D1D5DB', '#D1D5DB'
   ];
 
-  const calmExperiences = [
-    {
-      id: 'ocean',
-      name: 'Flo: Ocean',
-      subtitle: 'Gentle waves',
-      icon: Wind,
-      color: '#1D9E75',
-      bgColor: '#E1F5EE',
-      vinylGrooves: ['#5DCAA5', '#1D9E75', '#0F6E56', '#5DCAA5', '#9FE1CB']
-    },
-    {
-      id: 'rain',
-      name: 'Flo: Rain',
-      subtitle: 'Soft rainfall',
-      icon: Wind,
-      color: '#378ADD',
-      bgColor: '#E6F1FB',
-      vinylGrooves: ['#85B7EB', '#378ADD', '#185FA5', '#85B7EB', '#B5D4F4']
-    },
-    {
-      id: 'fire',
-      name: 'Flo: Fire',
-      subtitle: 'Crackling warmth',
-      icon: Wind,
-      color: '#D85A30',
-      bgColor: '#FAECE7',
-      vinylGrooves: ['#F0997B', '#D85A30', '#993C1D', '#F0997B', '#F5C4B3']
-    }
+  const calmOptions = [
+    { id: 'ocean', name: 'Ocean', color: '#1D9E75', bgColor: '#E1F5EE' },
+    { id: 'rain', name: 'Rain', color: '#378ADD', bgColor: '#E6F1FB' },
+    { id: 'fire', name: 'Fire', color: '#D85A30', bgColor: '#FAECE7' },
+    { id: 'breathe', name: 'Breathe', color: '#14B8A6', bgColor: '#E6FFFA' }
+  ];
+
+  const moods = ['Great', 'Good', 'Okay', 'Low', 'Struggling'];
+
+  const symptomsList = [
+    { id: 'hotFlash', label: 'Hot flash' },
+    { id: 'nightSweat', label: 'Night sweat' },
+    { id: 'poorSleep', label: 'Poor sleep' },
+    { id: 'brainFog', label: 'Brain fog' },
+    { id: 'moodSwing', label: 'Mood swing' },
+    { id: 'period', label: 'Period' }
+  ];
+
+  const medicationsList = [
+    { id: 'hrt', label: 'HRT' },
+    { id: 'vitaminD', label: 'Vitamin D' },
+    { id: 'calcium', label: 'Calcium' },
+    { id: 'eveningPrimrose', label: 'Evening primrose' },
+    { id: 'magnesium', label: 'Magnesium' },
+    { id: 'blackCohosh', label: 'Black cohosh' }
   ];
 
   const playlists = [
-    {
-      name: 'Calm & Peaceful',
-      tracks: '20 tracks · 60 min',
-      gradient: 'linear-gradient(135deg, #E1F5EE 0%, #9FE1CB 100%)',
-      iconColor: '#0F6E56'
-    },
-    {
-      name: 'Uplifting Energy',
-      tracks: '20 tracks · 60 min',
-      gradient: 'linear-gradient(135deg, #FAEEDA 0%, #FAC775 100%)',
-      iconColor: '#854F0B'
-    },
-    {
-      name: 'Sleep & Rest',
-      tracks: '15 tracks · 90 min',
-      gradient: 'linear-gradient(135deg, #EEEDFE 0%, #CECBF6 100%)',
-      iconColor: '#534AB7'
-    }
+    { name: 'Calm & Peaceful', tracks: '20 tracks · 60 min', gradient: 'linear-gradient(135deg, #E1F5EE 0%, #9FE1CB 100%)', iconColor: '#0F6E56' },
+    { name: 'Uplifting Energy', tracks: '20 tracks · 60 min', gradient: 'linear-gradient(135deg, #FAEEDA 0%, #FAC775 100%)', iconColor: '#854F0B' },
+    { name: 'Sleep & Rest', tracks: '15 tracks · 90 min', gradient: 'linear-gradient(135deg, #EEEDFE 0%, #CECBF6 100%)', iconColor: '#534AB7' }
   ];
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'mood', label: 'Mood', icon: Heart },
-    { id: 'track', label: 'Track', icon: FileText },
-    { id: 'calm', label: 'Calm', icon: Wind },
+    { id: 'journal', label: 'Journal', icon: FileText },
     { id: 'record', label: 'Record', icon: Mic },
     { id: 'listen', label: 'Listen', icon: Circle }
   ];
+
+  // Calendar helpers
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    return { daysInMonth, startingDayOfWeek };
+  };
+
+  const formatDateKey = (date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const getMoodColor = (mood) => {
+    const colors = {
+      'Great': '#10B981',
+      'Good': '#84CC16',
+      'Okay': '#F59E0B',
+      'Low': '#F97316',
+      'Struggling': '#EF4444'
+    };
+    return colors[mood] || '#9CA3AF';
+  };
 
   return (
     <div className="min-h-screen bg-stone-50 pb-20">
@@ -176,6 +219,75 @@ export default function Journal86() {
         .dot-pulse {
           animation: pulse 2s ease-in-out infinite;
         }
+        @keyframes rain-fall {
+          0% { 
+            transform: translateY(0); 
+            opacity: 0.3; 
+          }
+          5% { 
+            opacity: 1; 
+          }
+          95% { 
+            opacity: 1; 
+          }
+          100% { 
+            transform: translateY(200px); 
+            opacity: 0.3; 
+          }
+        }
+        .dot-rain {
+          animation: rain-fall 3s ease-in infinite;
+        }
+        @keyframes fire-flicker {
+          0% { 
+            transform: translate(0, 0) scale(1); 
+            opacity: 1; 
+          }
+          15% { 
+            transform: translate(-2px, -3px) scale(1.05); 
+            opacity: 0.95; 
+          }
+          30% { 
+            transform: translate(2px, 2px) scale(0.98); 
+            opacity: 0.9; 
+          }
+          45% { 
+            transform: translate(-3px, -4px) scale(1.03); 
+            opacity: 1; 
+          }
+          60% { 
+            transform: translate(2px, 3px) scale(0.97); 
+            opacity: 0.85; 
+          }
+          75% { 
+            transform: translate(-2px, -2px) scale(1.04); 
+            opacity: 0.95; 
+          }
+          90% { 
+            transform: translate(3px, 1px) scale(0.99); 
+            opacity: 0.9; 
+          }
+          100% { 
+            transform: translate(0, 0) scale(1); 
+            opacity: 1; 
+          }
+        }
+        .dot-fire {
+          animation: fire-flicker 2s ease-in-out infinite;
+        }
+        @keyframes breathe-pulse {
+          0%, 100% { 
+            opacity: 0.3; 
+            transform: scale(0.9);
+          }
+          50% { 
+            opacity: 1; 
+            transform: scale(1.2);
+          }
+        }
+        .dot-breathe {
+          animation: breathe-pulse 4s ease-in-out infinite;
+        }
         @keyframes cassette-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
@@ -186,10 +298,12 @@ export default function Journal86() {
       `}</style>
 
       {/* Header */}
-      <div className="bg-stone-50 px-5 pt-3 pb-2">
+      <div className="bg-stone-50 px-5 pt-3 pb-2 border-b border-stone-200">
         <div className="flex justify-between items-baseline mb-1">
           <div className="text-[11px] tracking-[2px] text-orange-500 font-semibold">MIXTAPE</div>
-          <div className="text-[11px] text-stone-500">14 Feb</div>
+          <div className="text-[11px] text-stone-500">
+            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </div>
         </div>
         <div className="flex justify-between items-baseline">
           <div className="text-[28px] font-light tracking-tight text-stone-900">Journal.86</div>
@@ -205,229 +319,287 @@ export default function Journal86() {
         {/* HOME TAB */}
         {activeTab === 'home' && (
           <div className="pt-6">
-            <div className="bg-white rounded-2xl p-8 mb-5 border border-stone-200/50">
-              <div className="relative" style={{ width: '100%', paddingBottom: '83.33%' }}>
-                <svg 
-                  viewBox="0 0 240 200" 
-                  className="absolute inset-0 w-full h-full"
-                >
-                  {/* Animated Dot Grid */}
-                  <g>
-                    {Array.from({ length: 10 }, (_, row) =>
-                      Array.from({ length: 12 }, (_, col) => (
+            <div className="mb-6">
+              <div className="text-sm text-stone-500">How are you feeling?</div>
+            </div>
+
+            {/* Dots with Animation */}
+            <div className="bg-white rounded-2xl p-8 mb-6 border border-stone-200/50">
+              <svg viewBox="0 0 240 200" className="w-full h-auto" style={{ overflow: 'visible' }}>
+                <g>
+                  {Array.from({ length: 10 }, (_, row) =>
+                    Array.from({ length: 12 }, (_, col) => {
+                      const animationClass = 
+                        selectedCalm === 'ocean' ? 'dot-pulse' :
+                        selectedCalm === 'rain' ? 'dot-rain' :
+                        selectedCalm === 'fire' ? 'dot-fire' :
+                        selectedCalm === 'breathe' ? 'dot-breathe' : '';
+                      
+                      // Generate random delay for rain and fire
+                      const randomDelay = Math.random() * 3;
+                      const fireRandomDelay = Math.random() * 1.5;
+                      const breatheDelay = (row * 12 + col) * 0.01; // Synchronized wave
+                      
+                      const delay = 
+                        selectedCalm === 'ocean' ? (row * 12 + col) * 0.02 :
+                        selectedCalm === 'rain' ? randomDelay :
+                        selectedCalm === 'fire' ? fireRandomDelay :
+                        selectedCalm === 'breathe' ? breatheDelay : 0;
+                      
+                      return (
                         <circle
                           key={`home-${row}-${col}`}
                           cx={col * 20 + 10}
                           cy={row * 20 + 10}
                           r={4}
                           fill={dotColors[row]}
-                          className={isPlaying ? 'dot-pulse' : ''}
-                          style={{ animationDelay: `${(row * 12 + col) * 0.02}s` }}
+                          className={animationClass}
+                          style={{ 
+                            animationDelay: `${delay}s`,
+                            transformOrigin: 'center'
+                          }}
                         />
-                      ))
-                    )}
-                  </g>
-                </svg>
-              </div>
-              
-              <div className="text-center mt-4">
-                <div className="text-[15px] text-stone-900 font-normal mb-1">Flo mode</div>
-                <div className="text-xs text-stone-400">Select entry</div>
-              </div>
+                      );
+                    })
+                  )}
+                </g>
+              </svg>
             </div>
 
-            <div className="flex justify-center mb-8">
+            {/* Calm Selector */}
+            <div className="mb-6">
+              <div className="text-xs text-stone-500 mb-2">Choose your calm</div>
+              <div className="grid grid-cols-2 gap-2">
+                {calmOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => setSelectedCalm(option.id)}
+                    className={`rounded-lg p-3 border transition-all ${
+                      selectedCalm === option.id
+                        ? 'border-2'
+                        : 'border'
+                    }`}
+                    style={{
+                      borderColor: selectedCalm === option.id ? option.color : '#E7E5E4',
+                      backgroundColor: selectedCalm === option.id ? option.bgColor : 'white'
+                    }}
+                  >
+                    <div className="text-sm font-normal text-stone-900">{option.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* JOURNAL TAB */}
+        {activeTab === 'journal' && !selectedDate && (
+          <div className="pt-6">
+            {/* Calendar Month Navigation */}
+            <div className="flex items-center justify-between mb-4">
               <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/25 active:scale-95 transition-transform"
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                className="p-2 active:scale-95"
               >
-                {isPlaying ? (
-                  <Pause className="w-6 h-6 text-white" fill="white" />
-                ) : (
-                  <Play className="w-6 h-6 text-white ml-1" fill="white" />
-                )}
+                <ChevronLeft className="w-5 h-5 text-stone-600" />
+              </button>
+              <div className="text-[17px] font-medium text-stone-900">
+                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                className="p-2 active:scale-95"
+              >
+                <ChevronRight className="w-5 h-5 text-stone-600" />
               </button>
             </div>
-          </div>
-        )}
 
-        {/* MOOD TAB */}
-        {activeTab === 'mood' && (
-          <div className="pt-6">
-            <div className="mb-6">
-              <div className="text-[28px] font-light tracking-tight text-stone-900">Mood</div>
-              <div className="text-sm text-stone-500 mt-1">How are you feeling today?</div>
-            </div>
-
-            <div className="space-y-3">
-              {['Great', 'Good', 'Okay', 'Low', 'Struggling'].map((mood, idx) => (
-                <button
-                  key={mood}
-                  className="w-full bg-white rounded-xl p-5 border border-stone-200/50 text-left active:bg-stone-50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
-                      <Heart className="w-5 h-5 text-stone-600" strokeWidth={1.5} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[17px] text-stone-900 font-normal">{mood}</div>
-                    </div>
+            {/* Calendar */}
+            <div className="bg-white rounded-2xl p-4 mb-5 border border-stone-200/50">
+              <div className="grid grid-cols-7 gap-2 mb-3">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                  <div key={i} className="text-center text-xs text-stone-400 font-medium">
+                    {day}
                   </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TRACK TAB */}
-        {activeTab === 'track' && (
-          <div className="pt-6">
-            <div className="mb-6">
-              <div className="text-[28px] font-light tracking-tight text-stone-900">Track</div>
-              <div className="text-sm text-stone-500 mt-1">Your journal entries</div>
-            </div>
-
-            <div className="space-y-3">
-              {['Side A', 'Side B', 'Side M'].map((side) => (
-                <button
-                  key={side}
-                  className="w-full bg-white rounded-xl p-5 border border-stone-200/50 text-left active:bg-stone-50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-stone-600" strokeWidth={1.5} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[17px] text-stone-900 font-normal">{side}</div>
-                      <div className="text-xs text-stone-500">Tap to view entries</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* CALM TAB */}
-        {activeTab === 'calm' && (
-          <div className="pt-6">
-            {!selectedCalm ? (
-              <>
-                <div className="mb-6">
-                  <div className="text-[28px] font-light tracking-tight text-stone-900">Calm with Flo</div>
-                  <div className="text-sm text-stone-500 mt-1">Choose your experience</div>
-                </div>
-
-                <div className="space-y-3 mb-4">
-                  {calmExperiences.map((exp) => (
-                    <button
-                      key={exp.id}
-                      onClick={() => setSelectedCalm(exp)}
-                      className="w-full bg-white rounded-xl p-5 border border-stone-200/50 active:bg-stone-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div 
-                          className="w-12 h-12 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: exp.bgColor }}
-                        >
-                          <exp.icon className="w-6 h-6" strokeWidth={1.5} style={{ color: exp.color }} />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className="text-[17px] text-stone-900 font-normal">{exp.name}</div>
-                          <div className="text-xs text-stone-500">{exp.subtitle}</div>
-                        </div>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth="1.5">
-                          <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="text-center py-3 bg-orange-500/5 rounded-lg">
-                  <div className="text-xs text-stone-600">Unlock all Flo experiences with Pro</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="mb-6">
-                  <button 
-                    onClick={() => setSelectedCalm(null)}
-                    className="text-sm text-teal-600 mb-2"
-                  >
-                    ← Back
-                  </button>
-                  <div className="text-[28px] font-light tracking-tight text-stone-900">{selectedCalm.name}</div>
-                  <div className="text-sm text-stone-500 mt-1">{selectedCalm.subtitle}</div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-10 mb-6 border border-stone-200/50">
-                  <div className="relative" style={{ width: '100%', paddingBottom: '100%' }}>
-                    <svg viewBox="0 0 240 240" className="absolute inset-0 w-full h-full">
-                      <g className="vinyl-spin" style={{ transformOrigin: '120px 120px' }}>
-                        <circle cx="120" cy="120" r="119" fill="#1a1a1a"/>
-                        {selectedCalm.vinylGrooves.map((color, idx) => (
-                          <circle 
-                            key={idx}
-                            cx="120" 
-                            cy="120" 
-                            r={110 - idx * 20} 
-                            fill="none" 
-                            stroke={color} 
-                            strokeWidth="3" 
-                            opacity={0.3 + idx * 0.1}
-                          />
-                        ))}
-                        <circle cx="120" cy="120" r="50" fill={selectedCalm.bgColor}/>
-                        <text x="120" y="115" textAnchor="middle" fontSize="11" fill={selectedCalm.color} fontWeight="600">FLO</text>
-                        <text x="120" y="128" textAnchor="middle" fontSize="8" fill={selectedCalm.color}>{selectedCalm.id.toUpperCase()}</text>
-                        <circle cx="120" cy="120" r="10" fill={selectedCalm.color}/>
-                      </g>
-                    </svg>
-                  </div>
-
-                  <div className="flex justify-center mt-5 mb-5">
-                    <button
-                      className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-                      style={{ backgroundColor: selectedCalm.color, boxShadow: `0 4px 16px ${selectedCalm.color}40` }}
-                    >
-                      <Pause className="w-6 h-6 text-white" fill="white" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Volume2 className="w-4 h-4 text-stone-500" strokeWidth={1.5} />
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={volume}
-                      onChange={(e) => setVolume(e.target.value)}
-                      className="flex-1"
-                    />
-                    <span className="text-xs text-stone-500 min-w-[32px]">{volume}%</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {calmExperiences.filter(e => e.id !== selectedCalm.id).map((exp) => (
-                    <button
-                      key={exp.id}
-                      onClick={() => setSelectedCalm(exp)}
-                      className="bg-white rounded-xl p-4 border border-stone-200/50 text-center active:bg-stone-50 transition-colors"
-                    >
-                      <div 
-                        className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center"
-                        style={{ backgroundColor: exp.bgColor }}
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                {(() => {
+                  const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth);
+                  const days = [];
+                  
+                  for (let i = 0; i < startingDayOfWeek; i++) {
+                    days.push(<div key={`empty-${i}`} />);
+                  }
+                  
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                    const dateKey = formatDateKey(date);
+                    const entry = entries[dateKey];
+                    const isToday = dateKey === formatDateKey(new Date());
+                    
+                    days.push(
+                      <button
+                        key={day}
+                        onClick={() => setSelectedDate(date)}
+                        className={`aspect-square rounded-lg flex flex-col items-center justify-center text-sm relative ${
+                          isToday ? 'bg-orange-100 text-orange-900' : 'text-stone-900'
+                        }`}
                       >
-                        <exp.icon className="w-5 h-5" strokeWidth={1.5} style={{ color: exp.color }} />
-                      </div>
-                      <div className="text-xs text-stone-900">{exp.name.split(': ')[1]}</div>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+                        {day}
+                        {entry && (
+                          <div
+                            className="w-1.5 h-1.5 rounded-full mt-1"
+                            style={{ backgroundColor: getMoodColor(entry.mood) }}
+                          />
+                        )}
+                      </button>
+                    );
+                  }
+                  
+                  return days;
+                })()}
+              </div>
+            </div>
+
+            {/* Download Report */}
+            <button className="w-full bg-white border border-stone-200 rounded-xl p-4 mb-4 flex items-center justify-center gap-2 active:bg-stone-50">
+              <Download className="w-5 h-5 text-stone-600" strokeWidth={1.5} />
+              <span className="text-[15px] text-stone-900">Download report</span>
+            </button>
+
+            {/* Recent Entries */}
+            <div className="mb-4">
+              <div className="text-sm font-medium text-stone-900 mb-3">Recent entries</div>
+              {Object.entries(entries).reverse().slice(0, 3).map(([date, entry]) => (
+                <button
+                  key={date}
+                  onClick={() => setSelectedDate(new Date(date))}
+                  className="w-full bg-white rounded-xl p-4 mb-2 border border-stone-200/50 text-left active:bg-stone-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getMoodColor(entry.mood) }}
+                    />
+                    <span className="text-xs text-stone-500">
+                      {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <span className="text-xs text-stone-400">• {entry.mood}</span>
+                  </div>
+                  <div className="text-sm text-stone-700 line-clamp-2">{entry.text}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* JOURNAL ENTRY FORM */}
+        {activeTab === 'journal' && selectedDate && (
+          <div className="pt-6">
+            <button
+              onClick={() => setSelectedDate(null)}
+              className="text-sm text-teal-600 mb-4"
+            >
+              ← Back to calendar
+            </button>
+
+            <div className="text-[24px] font-light tracking-tight text-stone-900 mb-6">
+              {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </div>
+
+            {/* Text Entry */}
+            <div className="mb-4">
+              <label className="text-sm text-stone-600 mb-2 block">How was your day?</label>
+              <textarea
+                value={journalEntry}
+                onChange={(e) => setJournalEntry(e.target.value)}
+                placeholder="Write your thoughts..."
+                className="w-full bg-white border border-stone-200 rounded-xl p-4 min-h-[120px] text-[15px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+              />
+            </div>
+
+            {/* Symptoms */}
+            <div className="mb-4">
+              <label className="text-sm text-stone-600 mb-2 block">Symptoms today</label>
+              <div className="grid grid-cols-2 gap-2">
+                {symptomsList.map((symptom) => (
+                  <button
+                    key={symptom.id}
+                    onClick={() => setSymptoms(prev => ({ ...prev, [symptom.id]: !prev[symptom.id] }))}
+                    className={`p-3 rounded-lg border text-sm text-left ${
+                      symptoms[symptom.id]
+                        ? 'bg-orange-50 border-orange-500 text-orange-900'
+                        : 'bg-white border-stone-200 text-stone-700'
+                    }`}
+                  >
+                    {symptom.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Medications */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-sm text-stone-600">
+                  Log medication and supplements taken <span className="text-stone-400">(optional)</span>
+                </label>
+                <button
+                  onClick={() => alert('This is a tracking tool only, not medical advice. Consult your healthcare provider before starting or stopping any medication.')}
+                  className="w-4 h-4 rounded-full bg-stone-200 flex items-center justify-center active:scale-95"
+                >
+                  <span className="text-[10px] text-stone-600 font-semibold">i</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {medicationsList.map((medication) => (
+                  <button
+                    key={medication.id}
+                    onClick={() => setMedications(prev => ({ ...prev, [medication.id]: !prev[medication.id] }))}
+                    className={`p-3 rounded-lg border text-sm text-left ${
+                      medications[medication.id]
+                        ? 'bg-teal-50 border-teal-500 text-teal-900'
+                        : 'bg-white border-stone-200 text-stone-700'
+                    }`}
+                  >
+                    {medication.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={customMedication}
+                onChange={(e) => setCustomMedication(e.target.value)}
+                placeholder="Other (e.g., Aspirin, Fish oil)"
+                className="w-full bg-white border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+              />
+            </div>
+
+            {/* Mood */}
+            <div className="mb-6">
+              <label className="text-sm text-stone-600 mb-2 block">Mood</label>
+              <div className="flex gap-2">
+                {moods.map((mood) => (
+                  <button
+                    key={mood}
+                    onClick={() => setSelectedMood(mood)}
+                    className={`flex-1 p-2 rounded-lg border text-xs ${
+                      selectedMood === mood
+                        ? 'border-teal-500 bg-teal-50 text-teal-900'
+                        : 'bg-white border-stone-200 text-stone-700'
+                    }`}
+                  >
+                    {mood}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <button className="w-full bg-orange-500 text-white rounded-xl p-4 active:scale-[0.98] transition-transform">
+              <div className="text-[17px] font-normal">Save entry</div>
+            </button>
           </div>
         )}
 
@@ -435,9 +607,9 @@ export default function Journal86() {
         {activeTab === 'record' && (
           <div className="pt-6">
             <div className="mb-6">
-              <div className="text-[28px] font-light tracking-tight text-stone-900">Talk to Flo</div>
+              <div className="text-[28px] font-light tracking-tight text-stone-900">Voice note</div>
               <div className="text-sm text-stone-500 mt-1">
-                {isRecording ? 'Flo is listening' : 'Flo is here for you'}
+                {isRecording ? 'Recording...' : 'Record your thoughts'}
               </div>
             </div>
 
@@ -462,20 +634,15 @@ export default function Journal86() {
                     )}
                   </g>
                   
-                  {/* Cassette Tape Overlay */}
+                  {/* Cassette Tape */}
                   <g transform="translate(120, 100)">
-                    {/* Cassette body */}
                     <rect x="-90" y="-50" width="180" height="100" rx="4" fill="#1a1a1a" opacity="0.95"/>
-                    
-                    {/* Top window */}
                     <rect x="-80" y="-40" width="160" height="50" rx="2" fill="#2a2a2a" opacity="0.8"/>
-                    
-                    {/* Label */}
                     <rect x="-70" y="-35" width="140" height="40" fill="#FAFAF9"/>
                     <text x="0" y="-20" textAnchor="middle" fontSize="8" fill="#FF8C42" fontWeight="600" letterSpacing="1">JOURNAL.86</text>
-                    <text x="0" y="-8" textAnchor="middle" fontSize="6" fill="#78716C" letterSpacing="0.5">SIDE A · MIXTAPE</text>
+                    <text x="0" y="-8" textAnchor="middle" fontSize="6" fill="#78716C" letterSpacing="0.5">VOICE NOTE · MIXTAPE</text>
                     
-                    {/* Left spool - with transform origin at center */}
+                    {/* Left spool */}
                     <g transform="translate(-45, 20)">
                       <g className={isRecording ? 'cassette-spool-spin' : ''}>
                         <circle cx="0" cy="0" r="18" fill="#3a3a3a"/>
@@ -488,7 +655,7 @@ export default function Journal86() {
                       </g>
                     </g>
                     
-                    {/* Right spool - with transform origin at center */}
+                    {/* Right spool */}
                     <g transform="translate(45, 20)">
                       <g className={isRecording ? 'cassette-spool-spin' : ''}>
                         <circle cx="0" cy="0" r="18" fill="#3a3a3a"/>
@@ -501,10 +668,7 @@ export default function Journal86() {
                       </g>
                     </g>
                     
-                    {/* Tape between spools */}
                     <rect x="-27" y="16" width="54" height="8" fill="#4a3520" opacity="0.6"/>
-                    
-                    {/* Screws */}
                     <circle cx="-75" cy="-42" r="2" fill="#2a2a2a"/>
                     <circle cx="75" cy="-42" r="2" fill="#2a2a2a"/>
                     <circle cx="-75" cy="42" r="2" fill="#2a2a2a"/>
@@ -528,7 +692,7 @@ export default function Journal86() {
                 ))}
               </div>
 
-              {/* Tape Recorder Control Buttons */}
+              {/* Tape Controls */}
               <div className="bg-stone-800 rounded-lg p-3 mt-5">
                 <div className="flex justify-center gap-2">
                   <div className="flex flex-col items-center gap-1">
@@ -641,10 +805,13 @@ export default function Journal86() {
               <div className="text-sm text-stone-500 mt-1">Music for your mood</div>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 mb-5 border border-stone-200/50 text-center">
-              <div className="relative mx-auto mb-6" style={{ width: '100%', maxWidth: '240px' }}>
-                <svg viewBox="0 0 240 200" className="w-full h-auto" style={{ overflow: 'visible' }}>
-                  {/* Dot Grid Background */}
+            <div className="bg-white rounded-2xl p-8 mb-5 border border-stone-200/50">
+              <div className="relative" style={{ width: '100%', paddingBottom: '83.33%' }}>
+                <svg 
+                  viewBox="0 0 240 200" 
+                  className="absolute inset-0 w-full h-full"
+                >
+                  {/* Dot Grid */}
                   <g>
                     {Array.from({ length: 10 }, (_, row) =>
                       Array.from({ length: 12 }, (_, col) => (
@@ -679,7 +846,7 @@ export default function Journal86() {
                 </svg>
               </div>
 
-              <div className="mb-5">
+              <div className="text-center mt-5 mb-5">
                 <div className="text-[17px] font-normal text-stone-900 mb-1">{currentTrack}</div>
                 <div className="text-xs text-stone-500">Relaxing instrumentals</div>
               </div>
@@ -731,7 +898,9 @@ export default function Journal86() {
                       className="w-10 h-10 rounded-lg flex items-center justify-center"
                       style={{ background: playlist.gradient }}
                     >
-                      <Wind className="w-5 h-5" strokeWidth={1.5} style={{ color: playlist.iconColor }} />
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={playlist.iconColor} strokeWidth="1.5">
+                        <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+                      </svg>
                     </div>
                     <div className="flex-1 text-left">
                       <div className="text-[15px] font-normal text-stone-900">{playlist.name}</div>
