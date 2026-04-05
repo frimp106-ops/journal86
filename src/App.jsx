@@ -1,883 +1,778 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, Heart, Moon, Sun, Zap, Brain, Coffee, Calendar, Download, Settings, User, LogOut, TrendingUp, Activity, Wind, CloudRain, Cloud, Minus, Sparkles, Flame, BedDouble, Theater, Battery, CloudFog, AlertCircle, FileText, Smile, Thermometer, Target } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Home, Heart, FileText, Wind, Mic, Circle, Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 
-// Main App Component
-export default function Journal86App() {
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+export default function Journal86() {
+  const [activeTab, setActiveTab] = useState('home');
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [selectedCalm, setSelectedCalm] = useState(null);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState('Calm Piano Mix');
+  const [progress, setProgress] = useState(154);
+  const [volume, setVolume] = useState(70);
   
-  // Navigation State
-  const [currentView, setCurrentView] = useState('home');
-  const [activeTab, setActiveTab] = useState('player');
-  
-  // Journal State
-  const [journalEntries, setJournalEntries] = useState([]);
-  const [currentSide, setCurrentSide] = useState('A'); // A, B, or M
-  const [entryText, setEntryText] = useState('');
-  
-  // Mood State
-  const [currentMood, setCurrentMood] = useState(3);
-  const [moodHistory, setMoodHistory] = useState([
-    { date: '2026-04-04', mood: 3, color: 'green' },
-    { date: '2026-04-03', mood: 4, color: 'orange' },
-    { date: '2026-04-02', mood: 2, color: 'teal' },
-    { date: '2026-04-01', mood: 5, color: 'pink' },
-    { date: '2026-03-31', mood: 3, color: 'green' },
-    { date: '2026-03-30', mood: 4, color: 'orange' },
-    { date: '2026-03-29', mood: 2, color: 'teal' },
-  ]);
-  
-  // Symptom State
-  const [symptoms, setSymptoms] = useState({
-    hotFlashes: { intensity: 0, tracked: false },
-    sleep: { intensity: 0, tracked: false },
-    moodSwings: { intensity: 0, tracked: false },
-    fatigue: { intensity: 0, tracked: false },
-    brainFog: { intensity: 0, tracked: false },
-    anxiety: { intensity: 0, tracked: false },
-  });
-  
-  // Period Tracking
-  const [periodData, setPeriodData] = useState({
-    lastPeriod: null,
-    cycleLength: 28,
-    flow: null,
-  });
-  
-  // Goals State
-  const [goals, setGoals] = useState([
-    { id: 1, name: 'Sleep 7+ hours', completed: false, icon: 'Moon' },
-    { id: 2, name: 'Movement/Exercise', completed: false, icon: 'Activity' },
-    { id: 3, name: 'Calm Practice', completed: false, icon: 'Wind' },
-  ]);
-  
-  // Visualization State
-  const [audioLevels, setAudioLevels] = useState(Array(120).fill(0));
-  const [knightPosition, setKnightPosition] = useState(0);
-  const [knightDirection, setKnightDirection] = useState(1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  
-  // Subscription State
-  const [subscriptionTier, setSubscriptionTier] = useState('free'); // free, pro
-  const [entriesThisMonth, setEntriesThisMonth] = useState(3);
-  
-  // Knight Rider Animation
-  useEffect(() => {
-    if (!isPlaying) return;
+  const recordingInterval = useRef(null);
+  const audioContext = useRef(null);
+
+  // Cassette sounds
+  const playInsertSound = () => {
+    if (!audioContext.current) {
+      audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = audioContext.current;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
     
-    const interval = setInterval(() => {
-      setKnightPosition(prev => {
-        const cols = 12;
-        let newPos = prev + knightDirection;
-        
-        if (newPos >= cols - 1) {
-          setKnightDirection(-1);
-          return cols - 1;
-        } else if (newPos <= 0) {
-          setKnightDirection(1);
-          return 0;
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.setValueAtTime(200, ctx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.15);
+  };
+
+  const playStopSound = () => {
+    if (!audioContext.current) {
+      audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = audioContext.current;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.setValueAtTime(150, ctx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.12);
+  };
+
+  // Recording controls
+  const startRecording = () => {
+    playInsertSound();
+    setIsRecording(true);
+    setRecordingTime(0);
+    recordingInterval.current = setInterval(() => {
+      setRecordingTime(prev => prev + 1);
+    }, 1000);
+  };
+
+  const stopRecording = () => {
+    playStopSound();
+    setIsRecording(false);
+    if (recordingInterval.current) {
+      clearInterval(recordingInterval.current);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Dot grid data
+  const dotColors = [
+    '#D1D5DB', '#D1D5DB', '#FDE047', '#FB923C', 
+    '#FDA4AF', '#FDE68A', '#FEF3C7', '#D1D5DB', 
+    '#D1D5DB', '#D1D5DB'
+  ];
+
+  const calmExperiences = [
+    {
+      id: 'ocean',
+      name: 'Flo: Ocean',
+      subtitle: 'Gentle waves',
+      icon: Wind,
+      color: '#1D9E75',
+      bgColor: '#E1F5EE',
+      vinylGrooves: ['#5DCAA5', '#1D9E75', '#0F6E56', '#5DCAA5', '#9FE1CB']
+    },
+    {
+      id: 'rain',
+      name: 'Flo: Rain',
+      subtitle: 'Soft rainfall',
+      icon: Wind,
+      color: '#378ADD',
+      bgColor: '#E6F1FB',
+      vinylGrooves: ['#85B7EB', '#378ADD', '#185FA5', '#85B7EB', '#B5D4F4']
+    },
+    {
+      id: 'fire',
+      name: 'Flo: Fire',
+      subtitle: 'Crackling warmth',
+      icon: Wind,
+      color: '#D85A30',
+      bgColor: '#FAECE7',
+      vinylGrooves: ['#F0997B', '#D85A30', '#993C1D', '#F0997B', '#F5C4B3']
+    }
+  ];
+
+  const playlists = [
+    {
+      name: 'Calm & Peaceful',
+      tracks: '20 tracks · 60 min',
+      gradient: 'linear-gradient(135deg, #E1F5EE 0%, #9FE1CB 100%)',
+      iconColor: '#0F6E56'
+    },
+    {
+      name: 'Uplifting Energy',
+      tracks: '20 tracks · 60 min',
+      gradient: 'linear-gradient(135deg, #FAEEDA 0%, #FAC775 100%)',
+      iconColor: '#854F0B'
+    },
+    {
+      name: 'Sleep & Rest',
+      tracks: '15 tracks · 90 min',
+      gradient: 'linear-gradient(135deg, #EEEDFE 0%, #CECBF6 100%)',
+      iconColor: '#534AB7'
+    }
+  ];
+
+  const navItems = [
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'mood', label: 'Mood', icon: Heart },
+    { id: 'track', label: 'Track', icon: FileText },
+    { id: 'calm', label: 'Calm', icon: Wind },
+    { id: 'record', label: 'Record', icon: Mic },
+    { id: 'listen', label: 'Listen', icon: Circle }
+  ];
+
+  return (
+    <div className="min-h-screen bg-stone-50 pb-20">
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
-        return newPos;
-      });
-      
-      setAudioLevels(prev => 
-        prev.map((_, i) => {
-          const col = i % 12;
-          const distance = Math.abs(col - knightPosition);
-          if (distance === 0) return 1;
-          if (distance === 1) return 0.6;
-          if (distance === 2) return 0.3;
-          return 0.1;
-        })
-      );
-    }, 350);
-    
-    return () => clearInterval(interval);
-  }, [isPlaying, knightPosition, knightDirection]);
-  
-  // Mood Ripple Visualization
-  useEffect(() => {
-    if (isPlaying || currentView !== 'player') return;
-    
-    setAudioLevels(prev => 
-      prev.map((_, i) => {
-        const row = Math.floor(i / 12);
-        const col = i % 12;
-        const centerRow = 5;
-        const centerCol = 6;
-        const distance = Math.sqrt(
-          Math.pow(col - centerCol, 2) + Math.pow(row - centerRow, 2)
-        );
-        const maxDistance = Math.sqrt(
-          Math.pow(centerCol, 2) + Math.pow(centerRow, 2)
-        );
-        const normalizedDistance = distance / maxDistance;
-        const moodRadius = (currentMood / 5) * maxDistance;
-        return distance <= moodRadius ? (1 - normalizedDistance) * 0.8 : 0.1;
-      })
-    );
-  }, [currentMood, isPlaying, currentView]);
-  
-  // Helper Functions
-  const saveMood = (level) => {
-    setCurrentMood(level);
-    const today = new Date().toISOString().split('T')[0];
-    const colors = ['blue', 'teal', 'green', 'orange', 'pink'];
-    setMoodHistory(prev => [
-      { date: today, mood: level, color: colors[level - 1] },
-      ...prev.filter(m => m.date !== today).slice(0, 6)
-    ]);
-  };
-  
-  const saveJournalEntry = () => {
-    if (subscriptionTier === 'free' && entriesThisMonth >= 10) {
-      alert('Free tier limit reached! Upgrade to Pro for unlimited entries.');
-      return;
-    }
-    
-    const entry = {
-      id: Date.now(),
-      side: currentSide,
-      content: entryText,
-      mood: currentMood,
-      date: new Date().toISOString(),
-    };
-    
-    setJournalEntries(prev => [entry, ...prev]);
-    setEntryText('');
-    setEntriesThisMonth(prev => prev + 1);
-    alert('Entry saved!');
-  };
-  
-  const trackSymptom = (symptomName, intensity) => {
-    setSymptoms(prev => ({
-      ...prev,
-      [symptomName]: { intensity, tracked: true }
-    }));
-  };
-  
-  const toggleGoal = (goalId) => {
-    setGoals(prev => prev.map(goal => 
-      goal.id === goalId ? { ...goal, completed: !goal.completed } : goal
-    ));
-  };
-  
-  const downloadInformation = () => {
-    if (subscriptionTier === 'free') {
-      alert('Download feature available in Pro tier! Upgrade to export your information.');
-      return;
-    }
-    
-    // Generate simple text export
-    const exportData = `
-JOURNAL.86 - PERSONAL WELLNESS TRACKING INFORMATION
-Generated: ${new Date().toLocaleDateString()}
+        .vinyl-spin {
+          animation: spin 3s linear infinite;
+        }
+        .vinyl-spin-paused {
+          animation-play-state: paused;
+        }
+        @keyframes wave {
+          0%, 100% { height: 8px; }
+          50% { height: 24px; }
+        }
+        .waveform-bar {
+          animation: wave 0.8s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.2); }
+        }
+        .dot-pulse {
+          animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes cassette-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .cassette-spool-spin {
+          animation: cassette-spin 2s linear infinite;
+        }
+      `}</style>
 
-MOOD HISTORY (Last 7 Days):
-${moodHistory.map(m => `${m.date}: ${m.mood}/5`).join('\n')}
-
-JOURNAL ENTRIES:
-${journalEntries.slice(0, 5).map(e => `
-Side ${e.side} - ${new Date(e.date).toLocaleDateString()}
-${e.content}
-`).join('\n---\n')}
-
-SYMPTOMS TRACKED:
-${Object.entries(symptoms).filter(([_, s]) => s.tracked).map(([name, s]) => 
-  `${name}: ${s.intensity}/5`
-).join('\n')}
-
-This document contains self-tracked information only.
-    `.trim();
-    
-    // Create download
-    const blob = new Blob([exportData], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `journal86-export-${new Date().toISOString().split('T')[0]}.txt`;
-    a.click();
-  };
-  
-  // Login/Signup
-  const handleAuth = (email, password, isSignup) => {
-    // Simulate authentication
-    setCurrentUser({ email, name: email.split('@')[0] });
-    setIsAuthenticated(true);
-  };
-  
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setCurrentView('home');
-  };
-  
-  // AUTHENTICATION SCREEN
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50 to-stone-100 flex items-center justify-center p-4">
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-          
-          body {
-            margin: 0;
-            font-family: 'Inter', -apple-system, sans-serif;
-          }
-          
-          .pixel-time {
-            font-family: 'VT323', monospace;
-            letter-spacing: 0.1em;
-          }
-          
-          .scanlines {
-            background: linear-gradient(
-              to bottom,
-              transparent 50%,
-              rgba(0, 0, 0, 0.02) 50%
-            );
-            background-size: 100% 4px;
-            pointer-events: none;
-          }
-          
-          .neon-accent {
-            text-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
-          }
-        `}</style>
-        
-        <div className="w-full max-w-md">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="text-5xl font-light text-stone-800 tracking-tight mb-2">
-              Journal<span className="text-orange-500 neon-accent">.</span>86
-            </div>
-            <div className="text-sm text-stone-500">Your Wellness Mixtape</div>
-          </div>
-          
-          {/* Auth Card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 relative overflow-hidden">
-            <div className="absolute inset-0 scanlines opacity-30" />
-            
-            <div className="relative z-10">
-              <h2 className="text-2xl font-light text-stone-800 mb-6">Welcome Back</h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-stone-600 mb-2">Email</label>
-                  <input
-                    type="email"
-                    placeholder="you@example.com"
-                    className="w-full px-4 py-3 rounded-lg border border-stone-200 focus:border-orange-500 focus:outline-none"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm text-stone-600 mb-2">Password</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full px-4 py-3 rounded-lg border border-stone-200 focus:border-orange-500 focus:outline-none"
-                  />
-                </div>
-                
-                <button
-                  onClick={() => handleAuth('demo@journal86.com', 'demo', false)}
-                  className="w-full bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
-                >
-                  Sign In
-                </button>
-                
-                <div className="text-center text-sm text-stone-500">
-                  Don't have an account?{' '}
-                  <button
-                    onClick={() => handleAuth('demo@journal86.com', 'demo', true)}
-                    className="text-orange-500 hover:underline"
-                  >
-                    Sign up
-                  </button>
-                </div>
-              </div>
-              
-              {/* Disclaimer */}
-              <div className="mt-8 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                <div className="text-xs text-stone-600">
-                  <strong>Important:</strong> JOURNAL.86 is a personal wellness tracking tool.
-                  We do NOT provide medical advice, diagnosis, or treatment.
-                  Always consult a healthcare professional for medical guidance.
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Footer */}
-          <div className="text-center mt-6 text-xs text-stone-500">
-            Not medical advice. Consult a healthcare professional.
+      {/* Header */}
+      <div className="bg-stone-50 px-5 pt-3 pb-2">
+        <div className="flex justify-between items-baseline mb-1">
+          <div className="text-[11px] tracking-[2px] text-orange-500 font-semibold">MIXTAPE</div>
+          <div className="text-[11px] text-stone-500">14 Feb</div>
+        </div>
+        <div className="flex justify-between items-baseline">
+          <div className="text-[28px] font-light tracking-tight text-stone-900">Journal.86</div>
+          <div className="text-2xl font-light text-orange-500">
+            {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
           </div>
         </div>
       </div>
-    );
-  }
-  
-  // MAIN APP
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50 to-stone-100">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+      {/* Content */}
+      <div className="px-5">
         
-        body {
-          margin: 0;
-          font-family: 'Inter', -apple-system, sans-serif;
-        }
-        
-        .pixel-time {
-          font-family: 'VT323', monospace;
-          letter-spacing: 0.1em;
-        }
-        
-        .scanlines {
-          background: linear-gradient(
-            to bottom,
-            transparent 50%,
-            rgba(0, 0, 0, 0.02) 50%
-          );
-          background-size: 100% 4px;
-          pointer-events: none;
-        }
-        
-        .neon-accent {
-          text-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
-        }
-        
-        .speaker-dot {
-          transition: all 0.3s ease-out;
-        }
-      `}</style>
-      
-      <div className="max-w-2xl mx-auto p-4 pb-24">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-orange-600 font-light mb-1">Mixtape</div>
-            <div className="text-3xl font-light text-stone-800 tracking-tight">
-              Journal<span className="text-orange-500 neon-accent">.</span>86
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-stone-500 font-light">
-              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </div>
-            <div className="pixel-time text-2xl font-bold text-orange-500">
-              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-            </div>
-          </div>
-        </div>
-        
-        {/* Dot Grid Visualization */}
-        <div className="bg-gradient-to-br from-stone-50 to-stone-100 rounded-2xl p-12 mb-8 relative overflow-hidden shadow-inner border border-stone-200">
-          <div className="absolute inset-0 scanlines rounded-2xl" />
-          
-          {/* Circular Dot Grid */}
-          <div className="relative w-full aspect-square flex items-center justify-center mb-6">
-            {audioLevels.map((level, i) => {
-              const row = Math.floor(i / 12);
-              const col = i % 12;
+        {/* HOME TAB */}
+        {activeTab === 'home' && (
+          <div className="pt-6">
+            <div className="bg-white rounded-2xl p-8 mb-5 border border-stone-200/50">
+              <div className="relative" style={{ width: '100%', paddingBottom: '83.33%' }}>
+                <svg 
+                  viewBox="0 0 240 200" 
+                  className="absolute inset-0 w-full h-full"
+                >
+                  {/* Animated Dot Grid */}
+                  <g>
+                    {Array.from({ length: 10 }, (_, row) =>
+                      Array.from({ length: 12 }, (_, col) => (
+                        <circle
+                          key={`home-${row}-${col}`}
+                          cx={col * 20 + 10}
+                          cy={row * 20 + 10}
+                          r={4}
+                          fill={dotColors[row]}
+                          className={isPlaying ? 'dot-pulse' : ''}
+                          style={{ animationDelay: `${(row * 12 + col) * 0.02}s` }}
+                        />
+                      ))
+                    )}
+                  </g>
+                </svg>
+              </div>
               
-              const x = (col - 5.5) * 8.33;
-              const y = (row - 5) * 10;
-              
-              let dotColor = 'bg-stone-800';
-              
-              if (isPlaying) {
-                const distance = Math.abs(col - knightPosition);
-                if (distance === 0) dotColor = 'bg-red-500';
-                else if (distance === 1) dotColor = 'bg-orange-500';
-                else if (distance === 2) dotColor = 'bg-yellow-500';
-                else dotColor = 'bg-stone-700';
-              } else {
-                if (currentMood === 1) dotColor = 'bg-blue-400';
-                else if (currentMood === 2) dotColor = 'bg-teal-400';
-                else if (currentMood === 3) dotColor = 'bg-green-400';
-                else if (currentMood === 4) dotColor = 'bg-orange-400';
-                else if (currentMood === 5) dotColor = 'bg-pink-400';
-              }
-              
-              return (
-                <div
-                  key={i}
-                  className={`speaker-dot w-2.5 h-2.5 rounded-full ${dotColor} absolute`}
-                  style={{
-                    left: `calc(50% + ${x}%)`,
-                    top: `calc(50% + ${y}%)`,
-                    transform: 'translate(-50%, -50%)',
-                    opacity: Math.max(0.15, level),
-                    scale: `${1 + level * 0.3}`,
-                  }}
-                />
-              );
-            })}
-          </div>
-          
-          {/* Status */}
-          <div className="text-center relative z-10">
-            <div className="text-sm font-light text-stone-600 mb-1">
-              {isPlaying ? '🚗 Knight Rider Mode' : '○ Mood Visualization'}
+              <div className="text-center mt-4">
+                <div className="text-[15px] text-stone-900 font-normal mb-1">Flo mode</div>
+                <div className="text-xs text-stone-400">Select entry</div>
+              </div>
             </div>
-            <div className="text-xs text-stone-400">
-              {isPlaying ? 'Press Stop' : `Mood: ${['Low', 'Fair', 'Neutral', 'Good', 'Great'][currentMood - 1]}`}
-            </div>
-          </div>
-        </div>
-        
-        {/* Main Content */}
-        {currentView === 'home' && (
-          <div className="space-y-6">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <div className="text-2xl font-bold text-orange-500">{entriesThisMonth}</div>
-                <div className="text-xs text-stone-500">Entries</div>
-                {subscriptionTier === 'free' && (
-                  <div className="text-xs text-stone-400 mt-1">{10 - entriesThisMonth} left</div>
+
+            <div className="flex justify-center mb-8">
+              <button
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/25 active:scale-95 transition-transform"
+              >
+                {isPlaying ? (
+                  <Pause className="w-6 h-6 text-white" fill="white" />
+                ) : (
+                  <Play className="w-6 h-6 text-white ml-1" fill="white" />
                 )}
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <div className="text-2xl font-bold text-green-500">{currentMood}</div>
-                <div className="text-xs text-stone-500">Mood</div>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <div className="text-2xl font-bold text-blue-500">
-                  {Object.values(symptoms).filter(s => s.tracked).length}
-                </div>
-                <div className="text-xs text-stone-500">Tracked</div>
-              </div>
+              </button>
             </div>
-            
-            {/* Quick Actions */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-lg font-light text-stone-800 mb-4">Quick Actions</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setCurrentView('journal')}
-                  className="p-4 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors"
-                >
-                  <FileText className="w-6 h-6 text-orange-500 mb-2" />
-                  <div className="text-sm font-medium text-stone-700">New Entry</div>
-                </button>
-                <button
-                  onClick={() => setCurrentView('mood')}
-                  className="p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-colors"
-                >
-                  <Smile className="w-6 h-6 text-green-500 mb-2" />
-                  <div className="text-sm font-medium text-stone-700">Track Mood</div>
-                </button>
-                <button
-                  onClick={() => setCurrentView('symptoms')}
-                  className="p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"
-                >
-                  <Thermometer className="w-6 h-6 text-blue-500 mb-2" />
-                  <div className="text-sm font-medium text-stone-700">Symptoms</div>
-                </button>
-                <button
-                  onClick={() => setCurrentView('goals')}
-                  className="p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-colors"
-                >
-                  <Target className="w-6 h-6 text-purple-500 mb-2" />
-                  <div className="text-sm font-medium text-stone-700">Goals</div>
-                </button>
-              </div>
+          </div>
+        )}
+
+        {/* MOOD TAB */}
+        {activeTab === 'mood' && (
+          <div className="pt-6">
+            <div className="mb-6">
+              <div className="text-[28px] font-light tracking-tight text-stone-900">Mood</div>
+              <div className="text-sm text-stone-500 mt-1">How are you feeling today?</div>
             </div>
-            
-            {/* Subscription Status */}
-            {subscriptionTier === 'free' && (
-              <div className="bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Upgrade to Pro</h3>
-                    <p className="text-sm opacity-90 mb-4">
-                      Unlimited entries, download your information, extended history
-                    </p>
-                    <div className="text-2xl font-bold">$4.99/month</div>
+
+            <div className="space-y-3">
+              {['Great', 'Good', 'Okay', 'Low', 'Struggling'].map((mood, idx) => (
+                <button
+                  key={mood}
+                  className="w-full bg-white rounded-xl p-5 border border-stone-200/50 text-left active:bg-stone-50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
+                      <Heart className="w-5 h-5 text-stone-600" strokeWidth={1.5} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[17px] text-stone-900 font-normal">{mood}</div>
+                    </div>
                   </div>
-                  <button className="px-6 py-2 bg-white text-orange-500 rounded-lg font-medium hover:bg-orange-50 transition-colors">
-                    Upgrade
-                  </button>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TRACK TAB */}
+        {activeTab === 'track' && (
+          <div className="pt-6">
+            <div className="mb-6">
+              <div className="text-[28px] font-light tracking-tight text-stone-900">Track</div>
+              <div className="text-sm text-stone-500 mt-1">Your journal entries</div>
+            </div>
+
+            <div className="space-y-3">
+              {['Side A', 'Side B', 'Side M'].map((side) => (
+                <button
+                  key={side}
+                  className="w-full bg-white rounded-xl p-5 border border-stone-200/50 text-left active:bg-stone-50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-stone-600" strokeWidth={1.5} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[17px] text-stone-900 font-normal">{side}</div>
+                      <div className="text-xs text-stone-500">Tap to view entries</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CALM TAB */}
+        {activeTab === 'calm' && (
+          <div className="pt-6">
+            {!selectedCalm ? (
+              <>
+                <div className="mb-6">
+                  <div className="text-[28px] font-light tracking-tight text-stone-900">Calm with Flo</div>
+                  <div className="text-sm text-stone-500 mt-1">Choose your experience</div>
                 </div>
-              </div>
+
+                <div className="space-y-3 mb-4">
+                  {calmExperiences.map((exp) => (
+                    <button
+                      key={exp.id}
+                      onClick={() => setSelectedCalm(exp)}
+                      className="w-full bg-white rounded-xl p-5 border border-stone-200/50 active:bg-stone-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div 
+                          className="w-12 h-12 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: exp.bgColor }}
+                        >
+                          <exp.icon className="w-6 h-6" strokeWidth={1.5} style={{ color: exp.color }} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="text-[17px] text-stone-900 font-normal">{exp.name}</div>
+                          <div className="text-xs text-stone-500">{exp.subtitle}</div>
+                        </div>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth="1.5">
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-center py-3 bg-orange-500/5 rounded-lg">
+                  <div className="text-xs text-stone-600">Unlock all Flo experiences with Pro</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <button 
+                    onClick={() => setSelectedCalm(null)}
+                    className="text-sm text-teal-600 mb-2"
+                  >
+                    ← Back
+                  </button>
+                  <div className="text-[28px] font-light tracking-tight text-stone-900">{selectedCalm.name}</div>
+                  <div className="text-sm text-stone-500 mt-1">{selectedCalm.subtitle}</div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-10 mb-6 border border-stone-200/50">
+                  <div className="relative" style={{ width: '100%', paddingBottom: '100%' }}>
+                    <svg viewBox="0 0 240 240" className="absolute inset-0 w-full h-full">
+                      <g className="vinyl-spin" style={{ transformOrigin: '120px 120px' }}>
+                        <circle cx="120" cy="120" r="119" fill="#1a1a1a"/>
+                        {selectedCalm.vinylGrooves.map((color, idx) => (
+                          <circle 
+                            key={idx}
+                            cx="120" 
+                            cy="120" 
+                            r={110 - idx * 20} 
+                            fill="none" 
+                            stroke={color} 
+                            strokeWidth="3" 
+                            opacity={0.3 + idx * 0.1}
+                          />
+                        ))}
+                        <circle cx="120" cy="120" r="50" fill={selectedCalm.bgColor}/>
+                        <text x="120" y="115" textAnchor="middle" fontSize="11" fill={selectedCalm.color} fontWeight="600">FLO</text>
+                        <text x="120" y="128" textAnchor="middle" fontSize="8" fill={selectedCalm.color}>{selectedCalm.id.toUpperCase()}</text>
+                        <circle cx="120" cy="120" r="10" fill={selectedCalm.color}/>
+                      </g>
+                    </svg>
+                  </div>
+
+                  <div className="flex justify-center mt-5 mb-5">
+                    <button
+                      className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                      style={{ backgroundColor: selectedCalm.color, boxShadow: `0 4px 16px ${selectedCalm.color}40` }}
+                    >
+                      <Pause className="w-6 h-6 text-white" fill="white" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Volume2 className="w-4 h-4 text-stone-500" strokeWidth={1.5} />
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={volume}
+                      onChange={(e) => setVolume(e.target.value)}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-stone-500 min-w-[32px]">{volume}%</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {calmExperiences.filter(e => e.id !== selectedCalm.id).map((exp) => (
+                    <button
+                      key={exp.id}
+                      onClick={() => setSelectedCalm(exp)}
+                      className="bg-white rounded-xl p-4 border border-stone-200/50 text-center active:bg-stone-50 transition-colors"
+                    >
+                      <div 
+                        className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center"
+                        style={{ backgroundColor: exp.bgColor }}
+                      >
+                        <exp.icon className="w-5 h-5" strokeWidth={1.5} style={{ color: exp.color }} />
+                      </div>
+                      <div className="text-xs text-stone-900">{exp.name.split(': ')[1]}</div>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
-        
-        {currentView === 'journal' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-light text-stone-800 mb-6">New Entry</h2>
-            
-            {/* Side Selector */}
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => setCurrentSide('A')}
-                className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-                  currentSide === 'A'
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
-              >
-                <Sun className="inline w-4 h-4 mr-2" />
-                Side A (Morning)
-              </button>
-              <button
-                onClick={() => setCurrentSide('B')}
-                className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-                  currentSide === 'B'
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
-              >
-                <Moon className="inline w-4 h-4 mr-2" />
-                Side B (Evening)
-              </button>
-              <button
-                onClick={() => setCurrentSide('M')}
-                className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-                  currentSide === 'M'
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
-              >
-                <Heart className="inline w-4 h-4 mr-2" />
-                Side M (Wellbeing)
-              </button>
-            </div>
-            
-            {/* Entry Area */}
-            <textarea
-              value={entryText}
-              onChange={(e) => setEntryText(e.target.value)}
-              placeholder={
-                currentSide === 'A'
-                  ? 'Good morning! How are you feeling today?'
-                  : currentSide === 'B'
-                  ? 'How was your day? Any reflections?'
-                  : 'How are you feeling? Any symptoms or thoughts to track?'
-              }
-              className="w-full h-64 p-4 rounded-lg border border-stone-200 focus:border-orange-500 focus:outline-none resize-none"
-            />
-            
-            {/* Actions */}
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={saveJournalEntry}
-                className="flex-1 bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
-              >
-                Save Entry
-              </button>
-              <button
-                onClick={() => setCurrentView('home')}
-                className="px-6 bg-stone-100 text-stone-600 py-3 rounded-lg font-medium hover:bg-stone-200 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {currentView === 'mood' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-light text-stone-800 mb-6">Track Your Mood</h2>
-            
-            {/* Mood Selector */}
-            <div className="space-y-4 mb-8">
-              {[
-                { level: 1, label: 'Low', color: 'blue', icon: 'CloudRain' },
-                { level: 2, label: 'Fair', color: 'teal', icon: 'Cloud' },
-                { level: 3, label: 'Neutral', color: 'green', icon: 'Minus' },
-                { level: 4, label: 'Good', color: 'orange', icon: 'Sun' },
-                { level: 5, label: 'Great', color: 'pink', icon: 'Sparkles' },
-              ].map(({ level, label, color, icon }) => {
-                const IconComponent = {
-                  CloudRain,
-                  Cloud,
-                  Minus,
-                  Sun,
-                  Sparkles
-                }[icon];
-                return (
-                <button
-                  key={level}
-                  onClick={() => saveMood(level)}
-                  className={`w-full p-4 rounded-xl border-2 transition-all ${
-                    currentMood === level
-                      ? `border-${color}-500 bg-${color}-50`
-                      : 'border-stone-200 hover:border-stone-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <IconComponent className={`w-5 h-5 text-${color}-500`} />
-                      <span className="font-medium text-stone-700">{label}</span>
-                    </div>
-                    {currentMood === level && (
-                      <div className={`w-3 h-3 rounded-full bg-${color}-500`} />
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-            </div>
-            
-            {/* Mood History with Dates */}
+
+        {/* RECORD TAB */}
+        {activeTab === 'record' && (
+          <div className="pt-6">
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-stone-600">Your Week</h3>
-                <div className="flex gap-2">
-                  <button className="p-1 rounded hover:bg-stone-100">
-                    <span className="text-stone-400">◀</span>
-                  </button>
-                  <button className="p-1 rounded hover:bg-stone-100">
-                    <span className="text-stone-400">▶</span>
-                  </button>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <div className="flex gap-3 min-w-max">
-                  {moodHistory.map((m, i) => {
-                    const date = new Date(m.date);
-                    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-                    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    const moodColors = {
-                      'blue': 'bg-blue-400',
-                      'teal': 'bg-teal-400',
-                      'green': 'bg-green-400',
-                      'orange': 'bg-orange-400',
-                      'pink': 'bg-pink-400'
-                    };
-                    return (
-                      <div key={i} className="flex flex-col items-center min-w-[70px]">
-                        <div className="text-xs text-stone-500 mb-1">{monthDay}</div>
-                        <div className="text-xs text-stone-400 mb-2">{dayOfWeek}</div>
-                        <div className={`w-8 h-8 ${moodColors[m.color]} rounded-full mb-2`} />
-                        <div className="text-xs font-medium text-stone-600">{m.mood}/5</div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="text-[28px] font-light tracking-tight text-stone-900">Talk to Flo</div>
+              <div className="text-sm text-stone-500 mt-1">
+                {isRecording ? 'Flo is listening' : 'Flo is here for you'}
               </div>
             </div>
-            
-            <button
-              onClick={() => setCurrentView('home')}
-              className="w-full bg-stone-100 text-stone-600 py-3 rounded-lg font-medium hover:bg-stone-200 transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        )}
-        
-        {currentView === 'symptoms' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-light text-stone-800 mb-6">Track Symptoms</h2>
-            
-            <div className="space-y-6">
-              {[
-                { key: 'hotFlashes', label: 'Hot Flashes', icon: Flame },
-                { key: 'sleep', label: 'Sleep Issues', icon: BedDouble },
-                { key: 'moodSwings', label: 'Mood Swings', icon: Theater },
-                { key: 'fatigue', label: 'Fatigue', icon: Battery },
-                { key: 'brainFog', label: 'Brain Fog', icon: CloudFog },
-                { key: 'anxiety', label: 'Anxiety', icon: AlertCircle },
-              ].map(({ key, label, icon: Icon }) => (
-                <div key={key}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Icon className="w-5 h-5 text-orange-500" />
-                      <span className="font-medium text-stone-700">{label}</span>
-                    </div>
-                    <span className="text-sm text-stone-500">
-                      {symptoms[key].intensity}/5
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="5"
-                    value={symptoms[key].intensity}
-                    onChange={(e) => trackSymptom(key, parseInt(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-              ))}
-            </div>
-            
-            <button
-              onClick={() => setCurrentView('home')}
-              className="w-full mt-6 bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
-            >
-              Save Symptoms
-            </button>
-          </div>
-        )}
-        
-        {currentView === 'goals' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-light text-stone-800 mb-6">Today's Goals</h2>
-            
-            <div className="space-y-4">
-              {goals.map((goal) => {
-                const IconComponent = {
-                  Moon,
-                  Activity,
-                  Wind
-                }[goal.icon];
-                return (
-                  <button
-                    key={goal.id}
-                    onClick={() => toggleGoal(goal.id)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                      goal.completed
-                        ? 'border-green-500 bg-green-50'
-                        : 'border-stone-200 hover:border-stone-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <IconComponent className={`w-5 h-5 ${goal.completed ? 'text-green-600' : 'text-stone-500'}`} />
-                        <span className={`font-medium ${
-                          goal.completed ? 'text-green-700 line-through' : 'text-stone-700'
-                        }`}>
-                          {goal.name}
-                        </span>
-                      </div>
-                      {goal.completed && (
-                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-sm">
-                          ✓
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            
-            <button
-              onClick={() => setCurrentView('home')}
-              className="w-full mt-6 bg-stone-100 text-stone-600 py-3 rounded-lg font-medium hover:bg-stone-200 transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        )}
-        
-        {currentView === 'settings' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-light text-stone-800 mb-6">Settings</h2>
-            
-            <div className="space-y-6">
-              {/* Account */}
-              <div>
-                <h3 className="text-sm font-medium text-stone-600 mb-3">Account</h3>
-                <div className="p-4 bg-stone-50 rounded-lg">
-                  <div className="text-sm text-stone-700">{currentUser?.email}</div>
-                  <div className="text-xs text-stone-500 mt-1">
-                    {subscriptionTier === 'free' ? 'Free Tier' : 'Pro Tier'}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Download */}
-              <div>
-                <h3 className="text-sm font-medium text-stone-600 mb-3">Export</h3>
-                <button
-                  onClick={downloadInformation}
-                  className="w-full p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors flex items-center justify-between"
+
+            <div className="bg-white rounded-2xl p-8 mb-5 border border-stone-200/50">
+              <div className="relative" style={{ width: '100%', paddingBottom: '83.33%' }}>
+                <svg 
+                  viewBox="0 0 240 200" 
+                  className="absolute inset-0 w-full h-full"
                 >
-                  <div className="flex items-center gap-3">
-                    <Download className="w-5 h-5 text-orange-500" />
-                    <span className="font-medium text-stone-700">Download My Information</span>
+                  {/* Dot Grid */}
+                  <g>
+                    {Array.from({ length: 10 }, (_, row) =>
+                      Array.from({ length: 12 }, (_, col) => (
+                        <circle
+                          key={`record-${row}-${col}`}
+                          cx={col * 20 + 10}
+                          cy={row * 20 + 10}
+                          r={4}
+                          fill={dotColors[row]}
+                        />
+                      ))
+                    )}
+                  </g>
+                  
+                  {/* Cassette Tape Overlay */}
+                  <g transform="translate(120, 100)">
+                    {/* Cassette body */}
+                    <rect x="-90" y="-50" width="180" height="100" rx="4" fill="#1a1a1a" opacity="0.95"/>
+                    
+                    {/* Top window */}
+                    <rect x="-80" y="-40" width="160" height="50" rx="2" fill="#2a2a2a" opacity="0.8"/>
+                    
+                    {/* Label */}
+                    <rect x="-70" y="-35" width="140" height="40" fill="#FAFAF9"/>
+                    <text x="0" y="-20" textAnchor="middle" fontSize="8" fill="#FF8C42" fontWeight="600" letterSpacing="1">JOURNAL.86</text>
+                    <text x="0" y="-8" textAnchor="middle" fontSize="6" fill="#78716C" letterSpacing="0.5">SIDE A · MIXTAPE</text>
+                    
+                    {/* Left spool - with transform origin at center */}
+                    <g transform="translate(-45, 20)">
+                      <g className={isRecording ? 'cassette-spool-spin' : ''}>
+                        <circle cx="0" cy="0" r="18" fill="#3a3a3a"/>
+                        <circle cx="0" cy="0" r="15" fill="none" stroke="#FF8C42" strokeWidth="1" opacity="0.4"/>
+                        <circle cx="0" cy="0" r="10" fill="none" stroke="#FB923C" strokeWidth="1" opacity="0.5"/>
+                        <circle cx="0" cy="0" r="5" fill="#2a2a2a"/>
+                        <line x1="-12" y1="0" x2="12" y2="0" stroke="#4a4a4a" strokeWidth="1"/>
+                        <line x1="0" y1="-12" x2="0" y2="12" stroke="#4a4a4a" strokeWidth="1"/>
+                        <circle cx="0" cy="0" r="3" fill="#1a1a1a"/>
+                      </g>
+                    </g>
+                    
+                    {/* Right spool - with transform origin at center */}
+                    <g transform="translate(45, 20)">
+                      <g className={isRecording ? 'cassette-spool-spin' : ''}>
+                        <circle cx="0" cy="0" r="18" fill="#3a3a3a"/>
+                        <circle cx="0" cy="0" r="15" fill="none" stroke="#14B8A6" strokeWidth="1" opacity="0.4"/>
+                        <circle cx="0" cy="0" r="10" fill="none" stroke="#5DCAA5" strokeWidth="1" opacity="0.5"/>
+                        <circle cx="0" cy="0" r="5" fill="#2a2a2a"/>
+                        <line x1="-12" y1="0" x2="12" y2="0" stroke="#4a4a4a" strokeWidth="1"/>
+                        <line x1="0" y1="-12" x2="0" y2="12" stroke="#4a4a4a" strokeWidth="1"/>
+                        <circle cx="0" cy="0" r="3" fill="#1a1a1a"/>
+                      </g>
+                    </g>
+                    
+                    {/* Tape between spools */}
+                    <rect x="-27" y="16" width="54" height="8" fill="#4a3520" opacity="0.6"/>
+                    
+                    {/* Screws */}
+                    <circle cx="-75" cy="-42" r="2" fill="#2a2a2a"/>
+                    <circle cx="75" cy="-42" r="2" fill="#2a2a2a"/>
+                    <circle cx="-75" cy="42" r="2" fill="#2a2a2a"/>
+                    <circle cx="75" cy="42" r="2" fill="#2a2a2a"/>
+                  </g>
+                </svg>
+              </div>
+
+              {/* Waveform */}
+              <div className="flex justify-center gap-1 h-6 items-center mt-5 mb-5">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-1 bg-teal-500 rounded-full ${isRecording ? 'waveform-bar' : ''}`}
+                    style={{
+                      height: isRecording ? '8px' : '4px',
+                      animationDelay: `${i * 0.1}s`,
+                      opacity: isRecording ? (i < 8 ? 1 : 0.3) : 0.3
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Tape Recorder Control Buttons */}
+              <div className="bg-stone-800 rounded-lg p-3 mt-5">
+                <div className="flex justify-center gap-2">
+                  <div className="flex flex-col items-center gap-1">
+                    <button className="w-9 h-9 bg-stone-700 border border-stone-600 rounded flex items-center justify-center active:scale-95 transition-transform">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#A8A29E">
+                        <polygon points="11 19 2 12 11 5 11 19"/>
+                        <polygon points="22 19 13 12 22 5 22 19"/>
+                      </svg>
+                    </button>
+                    <span className="text-[9px] text-stone-400">Rewind</span>
                   </div>
-                  {subscriptionTier === 'free' && (
-                    <span className="text-xs text-orange-500 font-medium">Pro</span>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <button className="w-9 h-9 bg-stone-700 border border-stone-600 rounded flex items-center justify-center active:scale-95 transition-transform">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#A8A29E">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                      </svg>
+                    </button>
+                    <span className="text-[9px] text-stone-400">Play</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <button 
+                      onClick={isRecording ? stopRecording : null}
+                      className="w-9 h-9 bg-stone-700 border border-stone-600 rounded flex items-center justify-center active:scale-95 transition-transform"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="#A8A29E">
+                        <rect x="4" y="4" width="16" height="16" rx="1"/>
+                      </svg>
+                    </button>
+                    <span className="text-[9px] text-stone-400">Stop</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <button 
+                      onClick={isRecording ? stopRecording : startRecording}
+                      className={`w-9 h-9 border rounded flex items-center justify-center active:scale-95 transition-transform ${
+                        isRecording ? 'bg-stone-600 border-orange-500' : 'bg-stone-700 border-stone-600'
+                      }`}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#EF4444">
+                        <circle cx="12" cy="12" r="8"/>
+                      </svg>
+                    </button>
+                    <span className="text-[9px] text-orange-500 font-medium">Record</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <button className="w-9 h-9 bg-stone-700 border border-stone-600 rounded flex items-center justify-center active:scale-95 transition-transform">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="#A8A29E">
+                        <rect x="6" y="4" width="4" height="16" rx="1"/>
+                        <rect x="14" y="4" width="4" height="16" rx="1"/>
+                      </svg>
+                    </button>
+                    <span className="text-[9px] text-stone-400">Pause</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <button className="w-9 h-9 bg-stone-700 border border-stone-600 rounded flex items-center justify-center active:scale-95 transition-transform">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#A8A29E">
+                        <polygon points="13 5 22 12 13 19 13 5"/>
+                        <polygon points="2 5 11 12 2 19 2 5"/>
+                      </svg>
+                    </button>
+                    <span className="text-[9px] text-stone-400">FF</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <button 
+                      onClick={() => {
+                        if (recordingTime > 0 && !isRecording) {
+                          setRecordingTime(0);
+                        }
+                      }}
+                      disabled={recordingTime === 0 && !isRecording}
+                      className={`w-9 h-9 border rounded flex items-center justify-center active:scale-95 transition-transform ${
+                        recordingTime > 0 && !isRecording 
+                          ? 'bg-stone-700 border-stone-600 cursor-pointer' 
+                          : 'bg-stone-800 border-stone-700 opacity-30 cursor-not-allowed'
+                      }`}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#A8A29E" stroke="#A8A29E" strokeWidth="1.5">
+                        <path d="M5 3h14v2H5z"/>
+                        <path d="M9 17v-7l6 3.5z"/>
+                      </svg>
+                    </button>
+                    <span className={`text-[8px] ${recordingTime > 0 && !isRecording ? 'text-red-500 font-medium' : 'text-stone-600'}`}>Eject-DEL</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center text-2xl font-light text-orange-500 mb-5 font-mono">
+              {formatTime(recordingTime)}
+            </div>
+
+            <div className="bg-teal-500/5 rounded-lg p-4 border border-teal-500/20">
+              <div className="text-xs text-teal-900 leading-relaxed text-center">
+                Tap the red ● button to start recording
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LISTEN TAB */}
+        {activeTab === 'listen' && (
+          <div className="pt-6">
+            <div className="mb-6">
+              <div className="text-[28px] font-light tracking-tight text-stone-900">Listen</div>
+              <div className="text-sm text-stone-500 mt-1">Music for your mood</div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-8 mb-5 border border-stone-200/50 text-center">
+              <div className="relative mx-auto mb-6" style={{ width: '100%', maxWidth: '240px' }}>
+                <svg viewBox="0 0 240 200" className="w-full h-auto" style={{ overflow: 'visible' }}>
+                  {/* Dot Grid Background */}
+                  <g>
+                    {Array.from({ length: 10 }, (_, row) =>
+                      Array.from({ length: 12 }, (_, col) => (
+                        <circle
+                          key={`listen-${row}-${col}`}
+                          cx={col * 20 + 10}
+                          cy={row * 20 + 10}
+                          r={4}
+                          fill={dotColors[row]}
+                        />
+                      ))
+                    )}
+                  </g>
+                  
+                  {/* Vinyl Overlay */}
+                  <g className={musicPlaying ? 'vinyl-spin' : 'vinyl-spin vinyl-spin-paused'} style={{ transformOrigin: '120px 100px' }}>
+                    <circle cx="120" cy="100" r="75" fill="#1a1a1a" opacity="0.95"/>
+                    <circle cx="120" cy="100" r="68" fill="none" stroke="#FDE047" strokeWidth="2" opacity="0.3"/>
+                    <circle cx="120" cy="100" r="60" fill="none" stroke="#FB923C" strokeWidth="2" opacity="0.4"/>
+                    <circle cx="120" cy="100" r="52" fill="none" stroke="#FDA4AF" strokeWidth="2" opacity="0.5"/>
+                    <circle cx="120" cy="100" r="44" fill="none" stroke="#FDE68A" strokeWidth="2" opacity="0.4"/>
+                    <circle cx="120" cy="100" r="64" fill="none" stroke="#2a2a2a" strokeWidth="0.5" opacity="0.6"/>
+                    <circle cx="120" cy="100" r="56" fill="none" stroke="#2a2a2a" strokeWidth="0.5" opacity="0.6"/>
+                    <circle cx="120" cy="100" r="48" fill="none" stroke="#2a2a2a" strokeWidth="0.5" opacity="0.6"/>
+                    <circle cx="120" cy="100" r="32" fill="#FAFAF9"/>
+                    <text x="120" y="95" textAnchor="middle" fontSize="9" fill="#FF8C42" fontWeight="600" letterSpacing="1">JOURNAL.86</text>
+                    <text x="120" y="105" textAnchor="middle" fontSize="6" fill="#78716C" letterSpacing="0.5">MIXTAPE</text>
+                    <circle cx="120" cy="100" r="6" fill="#1a1a1a"/>
+                    <line x1="170" y1="65" x2="150" y2="85" stroke="#A8A29E" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+                    <circle cx="170" cy="65" r="3" fill="#A8A29E" opacity="0.6"/>
+                  </g>
+                </svg>
+              </div>
+
+              <div className="mb-5">
+                <div className="text-[17px] font-normal text-stone-900 mb-1">{currentTrack}</div>
+                <div className="text-xs text-stone-500">Relaxing instrumentals</div>
+              </div>
+
+              <div className="mb-4">
+                <input
+                  type="range"
+                  min="0"
+                  max="2712"
+                  value={progress}
+                  onChange={(e) => setProgress(e.target.value)}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-[11px] text-stone-400 mt-1">
+                  <span>2:34</span>
+                  <span>45:12</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center items-center gap-8">
+                <button className="active:scale-95 transition-transform">
+                  <SkipBack className="w-6 h-6 text-stone-500" strokeWidth={1.5} />
+                </button>
+                <button
+                  onClick={() => setMusicPlaying(!musicPlaying)}
+                  className="w-14 h-14 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/25 active:scale-95 transition-transform"
+                >
+                  {musicPlaying ? (
+                    <Pause className="w-6 h-6 text-white" fill="white" />
+                  ) : (
+                    <Play className="w-6 h-6 text-white ml-1" fill="white" />
                   )}
                 </button>
+                <button className="active:scale-95 transition-transform">
+                  <SkipForward className="w-6 h-6 text-stone-500" strokeWidth={1.5} />
+                </button>
               </div>
-              
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="w-full p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-3"
-              >
-                <LogOut className="w-5 h-5 text-red-500" />
-                <span className="font-medium text-red-700">Log Out</span>
-              </button>
             </div>
-            
-            <button
-              onClick={() => setCurrentView('home')}
-              className="w-full mt-6 bg-stone-100 text-stone-600 py-3 rounded-lg font-medium hover:bg-stone-200 transition-colors"
-            >
-              Back
-            </button>
+
+            <div className="mb-4">
+              <div className="text-[15px] font-medium text-stone-900 mb-3">Playlists</div>
+              <div className="space-y-2">
+                {playlists.map((playlist) => (
+                  <button
+                    key={playlist.name}
+                    className="w-full bg-white rounded-xl p-4 border border-stone-200/50 flex items-center gap-3 active:bg-stone-50 transition-colors"
+                  >
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{ background: playlist.gradient }}
+                    >
+                      <Wind className="w-5 h-5" strokeWidth={1.5} style={{ color: playlist.iconColor }} />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="text-[15px] font-normal text-stone-900">{playlist.name}</div>
+                      <div className="text-xs text-stone-500">{playlist.tracks}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
-      
+
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 shadow-lg">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="flex items-center justify-around py-3">
-            <button
-              onClick={() => setCurrentView('home')}
-              className={`flex flex-col items-center gap-1 ${
-                currentView === 'home' ? 'text-orange-500' : 'text-stone-400'
-              }`}
-            >
-              <TrendingUp className="w-6 h-6" />
-              <span className="text-xs">Home</span>
-            </button>
-            <button
-              onClick={() => setCurrentView('journal')}
-              className={`flex flex-col items-center gap-1 ${
-                currentView === 'journal' ? 'text-orange-500' : 'text-stone-400'
-              }`}
-            >
-              <Coffee className="w-6 h-6" />
-              <span className="text-xs">Journal</span>
-            </button>
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              className={`flex flex-col items-center gap-1 ${
-                isPlaying ? 'text-orange-500' : 'text-stone-400'
-              }`}
-            >
-              <Zap className="w-6 h-6" />
-              <span className="text-xs">Play</span>
-            </button>
-            <button
-              onClick={() => setCurrentView('mood')}
-              className={`flex flex-col items-center gap-1 ${
-                currentView === 'mood' ? 'text-orange-500' : 'text-stone-400'
-              }`}
-            >
-              <Heart className="w-6 h-6" />
-              <span className="text-xs">Mood</span>
-            </button>
-            <button
-              onClick={() => setCurrentView('settings')}
-              className={`flex flex-col items-center gap-1 ${
-                currentView === 'settings' ? 'text-orange-500' : 'text-stone-400'
-              }`}
-            >
-              <Settings className="w-6 h-6" />
-              <span className="text-xs">Settings</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Footer Disclaimer */}
-      <div className="fixed bottom-16 left-0 right-0 pointer-events-none">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="text-center text-xs text-stone-400 bg-white/80 backdrop-blur-sm py-2 rounded-lg">
-            Not medical advice. Consult a healthcare professional.
-          </div>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200/50 px-2 py-3">
+        <div className="flex justify-around items-center max-w-2xl mx-auto">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className="flex flex-col items-center gap-1 active:scale-95 transition-transform"
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  isActive ? 'bg-teal-500' : 'bg-stone-200'
+                }`}>
+                  <Icon
+                    className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-600'}`}
+                    strokeWidth={1.5}
+                  />
+                </div>
+                <span className={`text-[11px] ${
+                  isActive ? 'text-teal-500 font-medium' : 'text-stone-600'
+                }`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
